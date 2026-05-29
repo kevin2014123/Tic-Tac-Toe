@@ -30,4 +30,9 @@
 
 ## 许可证
 
-[Apache License 2.0](LICENSE) · Copyright 2026 谢子涵 (Kevin)
+本项目的代码和资源在 **Apache License 2.0** 许可下开源。完整的许可证文本请参见仓库中的 [LICENSE](./LICENSE) 文件。
+
+**版权信息**  
+Copyright © 2026 谢子涵 (Kevin Xie Zihan)
+
+任何人可以自由使用、修改、分发本项目的代码，但需保留上述版权声明。更多细节请阅读完整的 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) 条款。
