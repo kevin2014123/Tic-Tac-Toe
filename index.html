@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>终极井字棋：不败的AI | 经典策略对决</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(145deg, #1a2a3a 0%, #0f1a24 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Poppins', 'Segoe UI', 'SF Pro Text', system-ui, -apple-system, 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 主卡片容器 */
+        .game-container {
+            background: rgba(22, 34, 48, 0.65);
+            backdrop-filter: blur(2px);
+            border-radius: 80px 80px 70px 70px;
+            padding: 25px 30px 35px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        /* 主面板 */
+        .tic-tac-toe {
+            background: #0e1a24;
+            border-radius: 68px;
+            padding: 28px 28px 32px;
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5), 0 20px 30px -8px black;
+        }
+
+        /* 状态栏 + 重置区 */
+        .status-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 1.8rem;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 0 12px;
+        }
+
+        .turn-indicator {
+            background: #07121c;
+            border-radius: 100px;
+            padding: 8px 24px;
+            font-weight: 600;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+            color: #c0e0ff;
+            box-shadow: inset 0 1px 3px #00000055, 0 5px 8px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+        }
+
+        .turn-indicator span {
+            color: #ffcf4a;
+            font-weight: 800;
+            text-shadow: 0 0 5px #ffb347;
+            margin-left: 8px;
+        }
+
+        .reset-btn {
+            background: #2c3e44;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 8px 28px;
+            border-radius: 60px;
+            color: #f0f9ff;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: inherit;
+            box-shadow: 0 5px 0 #0a1117;
+            transform: translateY(-2px);
+        }
+
+        .reset-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #0a1117;
+        }
+
+        /* 井字棋网格 */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            background-color: #0a121c;
+            padding: 18px;
+            border-radius: 56px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 0 1px #2a3a44, 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .cell {
+            background: #1f2e3c;
+            background-image: radial-gradient(circle at 35% 30%, rgba(255,255,245,0.05) 2%, transparent 2.5%);
+            background-size: 18px 18px;
+            aspect-ratio: 1 / 1;
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            box-shadow: 0 8px 0 #0a1017, inset 0 1px 0 rgba(255,255,255,0.1);
+            color: #eef4ff;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.4);
+        }
+
+        .cell.X-move {
+            color: #6cd4ff;
+            text-shadow: 0 0 12px #0099ff;
+        }
+
+        .cell.O-move {
+            color: #ffb86b;
+            text-shadow: 0 0 12px #ff7b2c;
+        }
+
+        .cell:active {
+            transform: scale(0.96);
+            box-shadow: 0 4px 0 #0a1017;
+        }
+
+        /* 禁用点击效果 */
+        .cell.disabled, .cell.won-cell {
+            cursor: default;
+            filter: brightness(0.95);
+            transform: scale(0.98);
+        }
+
+        .cell.won-cell {
+            background: linear-gradient(145deg, #2b4a5a, #173e4a);
+            box-shadow: 0 0 0 2px gold, inset 0 0 12px rgba(255,215,0,0.6);
+            color: #ffecb3;
+        }
+
+        /* 消息弹窗风格 */
+        .message-area {
+            text-align: center;
+            margin-top: 12px;
+            font-weight: 600;
+            font-size: 1.2rem;
+            background: #07121cd9;
+            backdrop-filter: blur(8px);
+            border-radius: 60px;
+            padding: 10px 16px;
+            color: #bdd4e2;
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 550px) {
+            .game-container {
+                padding: 12px 18px 25px;
+            }
+            .board {
+                gap: 12px;
+                padding: 14px;
+            }
+            .cell {
+                font-size: 3.5rem;
+                border-radius: 20px;
+            }
+            .turn-indicator {
+                font-size: 1rem;
+                padding: 6px 18px;
+            }
+            .reset-btn {
+                font-size: 1rem;
+                padding: 6px 20px;
+            }
+        }
+        
+        /* 优雅footer */
+        .ai-badge {
+            text-align: center;
+            font-size: 0.7rem;
+            margin-top: 18px;
+            opacity: 0.7;
+            color: #7e95a8;
+            letter-spacing: 0.5px;
+        }
+        
+        button {
+            background: none;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="tic-tac-toe">
+        <div class="status-area">
+            <div class="turn-indicator">
+                🎯 回合 · <span id="turnText">玩家 X</span>
+            </div>
+            <button class="reset-btn" id="resetBtn">🔄 新对局</button>
+        </div>
+        <div class="board" id="board">
+            <!-- 9 cells dynamically injected, but static structure works -->
+        </div>
+        <div class="message-area" id="messageBox">
+            ✨ 执棋先手 · 你将无法战胜 AI ✨
+        </div>
+        <div class="ai-badge">
+            🤖 无敌 AI (Minimax+剪枝) | 永不落败
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ---------- 游戏状态 ----------
+        let board = Array(9).fill(null);       // null / 'X' / 'O'
+        let gameActive = true;
+        let currentPlayer = 'X';               // X 总是玩家, O 总是AI
+        let winnerInfo = { winner: null, line: null };   // winner: 'X','O','tie'
+        
+        // DOM 元素
+        const boardContainer = document.getElementById('board');
+        const turnTextSpan = document.getElementById('turnText');
+        const messageBox = document.getElementById('messageBox');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        // 辅助: 胜利组合 (8种)
+        const winPatterns = [
+            [0,1,2], [3,4,5], [6,7,8],  // rows
+            [0,3,6], [1,4,7], [2,5,8],  // cols
+            [0,4,8], [2,4,6]            // diagonals
+        ];
+        
+        // 用于存储高亮单元格
+        let currentHighlighted = [];
+        
+        // 初始化渲染网格
+        function createBoardUI() {
+            boardContainer.innerHTML = '';
+            for(let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => handleCellClick(i));
+                boardContainer.appendChild(cell);
+            }
+            updateBoardUI();
+        }
+        
+        // 更新界面文字与样式
+        function updateBoardUI() {
+            const cells = document.querySelectorAll('.cell');
+            for(let i = 0; i < 9; i++) {
+                const val = board[i];
+                const cellDiv = cells[i];
+                cellDiv.textContent = val === 'X' ? '✖' : (val === 'O' ? '◯' : '');
+                if(val === 'X') {
+                    cellDiv.classList.add('X-move');
+                    cellDiv.classList.remove('O-move');
+                } else if(val === 'O') {
+                    cellDiv.classList.add('O-move');
+                    cellDiv.classList.remove('X-move');
+                } else {
+                    cellDiv.classList.remove('X-move', 'O-move');
+                }
+                // 重置高亮class (won-cell会在赢的时候加，但重绘时更新)
+                if(winnerInfo.line && winnerInfo.line.includes(i) && winnerInfo.winner && winnerInfo.winner !== 'tie') {
+                    cellDiv.classList.add('won-cell');
+                } else {
+                    cellDiv.classList.remove('won-cell');
+                }
+                // 是否禁用点击 (游戏结束或者不是玩家回合)
+                if(!gameActive || currentPlayer !== 'X' || board[i] !== null) {
+                    cellDiv.classList.add('disabled');
+                } else {
+                    cellDiv.classList.remove('disabled');
+                }
+            }
+            // 更新回合文本
+            if(gameActive) {
+                if(currentPlayer === 'X') {
+                    turnTextSpan.innerText = '玩家 ✖';
+                } else {
+                    turnTextSpan.innerText = 'AI ◯';
+                }
+            } else {
+                if(winnerInfo.winner === 'X') {
+                    turnTextSpan.innerText = '玩家胜？';
+                } else if(winnerInfo.winner === 'O') {
+                    turnTextSpan.innerText = 'AI胜！';
+                } else {
+                    turnTextSpan.innerText = '平局';
+                }
+            }
+        }
+        
+        // 检查胜利/平局, 返回 winner ( 'X', 'O', 'tie', 或 null )
+        function checkGameStatus() {
+            // 检查胜利
+            for(let pattern of winPatterns) {
+                const [a,b,c] = pattern;
+                if(board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return { winner: board[a], line: pattern };
+                }
+            }
+            // 检查平局: 所有格子非空
+            const isFull = board.every(cell => cell !== null);
+            if(isFull) {
+                return { winner: 'tie', line: null };
+            }
+            return { winner: null, line: null };
+        }
+        
+        // 更新游戏全局状态 + UI
+        function afterMoveUpdate() {
+            const status = checkGameStatus();
+            if(status.winner) {
+                gameActive = false;
+                winnerInfo = { winner: status.winner, line: status.line };
+                if(status.winner === 'X') {
+                    messageBox.innerHTML = '🏆 奇迹发生了... 但AI说他放水了？ 理论上不应发生，但恭喜！🏆';
+                } else if(status.winner === 'O') {
+                    messageBox.innerHTML = '🤖 AI 智胜一筹 · 你无法击败完美算法 🤖';
+                } else {
+                    messageBox.innerHTML = '📯 势均力敌！ 平局收场 · AI 守住了不败金身 📯';
+                    turnTextSpan.innerText = '平局';
+                }
+                updateBoardUI();
+                return true; // 游戏结束
+            }
+            // 未结束，切换玩家
+            currentPlayer = (currentPlayer === 'X') ? 'O' : 'X';
+            updateBoardUI();
+            
+            // 如果游戏活跃且当前轮到AI(O) -> AI走棋
+            if(gameActive && currentPlayer === 'O') {
+                setTimeout(() => {
+                    if(gameActive && currentPlayer === 'O') {
+                        aiMove();
+                    }
+                }, 80);
+            }
+            return false;
+        }
+        
+        // 处理玩家点击
+        function handleCellClick(index) {
+            if(!gameActive) return;
+            if(currentPlayer !== 'X') return;
+            if(board[index] !== null) return;
+            
+            // 执行玩家落子
+            board[index] = 'X';
+            updateBoardUI();
+            const ended = afterMoveUpdate();
+            if(ended) return;
+            // 如果游戏未结束且轮到AI，但afterMoveUpdate内部已经调度AI, 这里无需重复
+        }
+        
+        // ---------- 牛逼算法: 无敌 Minimax + Alpha-Beta 剪枝 (保证AI不输) ----------
+        // AI 是 'O' 最大化玩家，玩家 'X' 是最小化 (AI视角)
+        // 返回值: 分数 (AI胜利: +10, 玩家胜利: -10, 平局: 0)  + 最佳位置索引
+        
+        function minimax(boardArr, depth, isMaximizing, alpha, beta) {
+            // 评估当前局面
+            const status = evaluateBoardWinner(boardArr);
+            if(status === 'O') return 10 - depth;   // AI胜利尽早获胜加分倾向
+            if(status === 'X') return -10 + depth;  // 玩家胜利 (但理想情况AI不会让玩家胜)
+            if(status === 'tie') return 0;
+            
+            if(isMaximizing) {
+                let maxEval = -Infinity;
+                for(let i=0; i<9; i++) {
+                    if(boardArr[i] === null) {
+                        boardArr[i] = 'O';
+                        let eval = minimax(boardArr, depth+1, false, alpha, beta);
+                        boardArr[i] = null;
+                        maxEval = Math.max(maxEval, eval);
+                        alpha = Math.max(alpha, eval);
+                        if(beta <= alpha) break; // beta剪枝
+                    }
+                }
+                return maxEval === -Infinity ? 0 : maxEval;
+            } else {
+                let minEval = Infinity;
+                for(let i=0; i<9; i++) {
+                    if(boardArr[i] === null) {
+                        boardArr[i] = 'X';
+                        let eval = minimax(boardArr, depth+1, true, alpha, beta);
+                        boardArr[i] = null;
+                        minEval = Math.min(minEval, eval);
+                        beta = Math.min(beta, eval);
+                        if(beta <= alpha) break;
+                    }
+                }
+                return minEval === Infinity ? 0 : minEval;
+            }
+        }
+        
+        // 辅助评估给定board状态
+        function evaluateBoardWinner(boardArr) {
+            for(let pattern of winPatterns) {
+                const [a,b,c] = pattern;
+                if(boardArr[a] && boardArr[a] === boardArr[b] && boardArr[a] === boardArr[c]) {
+                    return boardArr[a];
+                }
+            }
+            if(boardArr.every(cell => cell !== null)) return 'tie';
+            return null;
+        }
+        
+        // AI 调用Minimax选择最佳落子 (保证不输)
+        function getBestAIMove() {
+            let bestScore = -Infinity;
+            let bestMove = -1;
+            // 遍历所有空格
+            for(let i=0; i<9; i++) {
+                if(board[i] === null) {
+                    board[i] = 'O';
+                    let moveScore = minimax(board, 0, false, -Infinity, Infinity);
+                    board[i] = null;
+                    if(moveScore > bestScore) {
+                        bestScore = moveScore;
+                        bestMove = i;
+                    }
+                }
+            }
+            // 防止没有空格 (理论上调用之前会检查)
+            if(bestMove === -1) return null;
+            return bestMove;
+        }
+        
+        // AI 执行移动 (保证完美)
+        function aiMove() {
+            if(!gameActive) return;
+            if(currentPlayer !== 'O') return;
+            // 快速检查是否还有空格
+            const emptyIndices = board.reduce((arr, cell, idx) => {
+                if(cell === null) arr.push(idx);
+                return arr;
+            }, []);
+            if(emptyIndices.length === 0) return;
+            
+            const bestIndex = getBestAIMove();
+            if(bestIndex !== null && bestIndex !== undefined && board[bestIndex] === null) {
+                board[bestIndex] = 'O';
+                updateBoardUI();
+                const ended = afterMoveUpdate();
+                if(ended) return;
+                // 如果游戏继续且轮到玩家，UI已启用
+            } else {
+                // fallback 安全落子 (理论上不会发生)
+                for(let idx of emptyIndices) {
+                    if(board[idx] === null) {
+                        board[idx] = 'O';
+                        updateBoardUI();
+                        afterMoveUpdate();
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 重置游戏 (完全重置)
+        function resetGame() {
+            board = Array(9).fill(null);
+            gameActive = true;
+            currentPlayer = 'X';   // 玩家先手
+            winnerInfo = { winner: null, line: null };
+            // 清除高亮样式类重建时重置，但直接更新UI
+            updateBoardUI();
+            messageBox.innerHTML = '✨ 新对局 · 你先手 ✨ 你能逼平AI就算胜利 ✨';
+            turnTextSpan.innerText = '玩家 ✖';
+            // 如果有任何残留高亮清除
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.classList.remove('won-cell', 'disabled');
+            });
+            updateBoardUI(); // 二次确保
+            // 如果之前AI轮到被重置不存在额外移动
+        }
+        
+        // 绑定重置按钮
+        resetBtn.addEventListener('click', () => {
+            resetGame();
+        });
+        
+        // 初始化界面
+        createBoardUI();
+        resetGame();    // 起始状态
+        
+        // 额外安全：如果AI先手? 不，玩家先手，所以reset已经处理
+        // 确保AI不会在游戏结束后乱动
+        // 完美主义：检查边缘状态， AI不占已满格
+    })();
+</script>
+</body>
+</html>
